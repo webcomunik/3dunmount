@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Unmounth - Paint & Split 3D Objects</title>
+  <link rel="stylesheet" href="/src/style.css">
+  <script>
+    window.addEventListener('error', function(event) {
+      const banner = document.getElementById('global-error-banner') || document.createElement('div');
+      banner.id = 'global-error-banner';
+      banner.style.position = 'fixed';
+      banner.style.top = '0';
+      banner.style.left = '0';
+      banner.style.width = '100%';
+      banner.style.background = 'rgba(239, 68, 68, 0.95)';
+      banner.style.color = '#ffffff';
+      banner.style.padding = '20px';
+      banner.style.zIndex = '999999';
+      banner.style.fontFamily = 'monospace';
+      banner.style.whiteSpace = 'pre-wrap';
+      banner.style.maxHeight = '40vh';
+      banner.style.overflowY = 'auto';
+      banner.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+      
+      banner.innerHTML = '<strong>[GLOBAL ERROR CAUGHT]:</strong> ' + event.message + '\n' + 
+        'Location: ' + event.filename + ':' + event.lineno + ':' + event.colno + '\n\n' +
+        '<strong>Stack Trace:</strong>\n' + (event.error ? event.error.stack : 'No stack trace available');
+        
+      if (!document.getElementById('global-error-banner')) {
+        document.body.appendChild(banner);
+      }
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      const banner = document.getElementById('global-error-banner') || document.createElement('div');
+      banner.id = 'global-error-banner';
+      banner.style.position = 'fixed';
+      banner.style.top = '0';
+      banner.style.left = '0';
+      banner.style.width = '100%';
+      banner.style.background = 'rgba(239, 68, 68, 0.95)';
+      banner.style.color = '#ffffff';
+      banner.style.padding = '20px';
+      banner.style.zIndex = '999999';
+      banner.style.fontFamily = 'monospace';
+      banner.style.whiteSpace = 'pre-wrap';
+      banner.style.maxHeight = '40vh';
+      banner.style.overflowY = 'auto';
+      banner.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+      
+      banner.innerHTML = '<strong>[UNHANDLED REJECTION]:</strong> ' + event.reason + '\n\n' +
+        '<strong>Stack Trace:</strong>\n' + (event.reason && event.reason.stack ? event.reason.stack : 'No stack trace available');
+        
+      if (!document.getElementById('global-error-banner')) {
+        document.body.appendChild(banner);
+      }
+    });
+  </script>
+</head>
+<body>
+
+  <!-- Background Glowing Blobs -->
+  <div class="bg-glow-container">
+    <div class="bg-glow-blob bg-glow-1"></div>
+    <div class="bg-glow-blob bg-glow-2"></div>
+    <div class="bg-glow-blob bg-glow-3"></div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container"></div>
+
+  <!-- AUTHENTICATION VIEW -->
+  <div id="auth-view">
+    <div class="login-card glass-panel">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 22h20L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 11v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+        </svg>
+        <h1>3D Unmounth</h1>
+      </div>
+      <p>Log in to access the 3D Paint & Split Studio</p>
+      
+      <form id="login-form" onsubmit="event.preventDefault();">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" value="designer" placeholder="Enter username..." required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" value="password" placeholder="Enter password..." required>
+        </div>
+        <button type="submit" id="btn-login" class="btn-primary">Enter Studio</button>
+      </form>
+
+      <div class="mock-info">
+        <p>Demo credentials loaded. Click "Enter Studio" to proceed.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN WORKBENCH VIEW (HIDDEN BY DEFAULT) -->
+  <div id="app-view" class="hidden">
+    <!-- Header -->
+    <header>
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 22h20L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 11v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+        </svg>
+        <h2>3D Unmounth Studio</h2>
+      </div>
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar" id="avatar-letters">D</div>
+          <span id="user-display-name">designer</span>
+        </div>
+        <button id="btn-logout" class="btn-logout">Logout</button>
+      </div>
+    </header>
+
+    <!-- Workspace -->
+    <div class="workspace-grid" id="workspace-layout">
+      
+      <!-- LEFT SIDEBAR: CONTROLS -->
+      <aside class="sidebar">
+        <!-- 1. File Upload -->
+        <div class="sidebar-section">
+          <h3>Load 3D Model</h3>
+          <div class="upload-zone" id="drop-zone">
+            <svg class="upload-icon" viewBox="0 0 24 24">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+            </svg>
+            <div class="upload-text">
+              <h4>Drag & drop file here</h4>
+              <p>Supports 3D models & .json projects</p>
+            </div>
+            <input type="file" id="file-input" accept=".stl,.obj,.3mf,.json,.unmounth.json">
+          </div>
+          <!-- Loaded File Badge -->
+          <div id="file-badge-container"></div>
+        </div>
+
+        <!-- 2. Orient Model -->
+        <div class="sidebar-section" id="transform-section">
+          <h3>Orient Model</h3>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px;">
+            <button id="btn-rot-x" class="btn-secondary" style="padding: 8px 4px; font-size: 0.8rem;" disabled>X +90°</button>
+            <button id="btn-rot-y" class="btn-secondary" style="padding: 8px 4px; font-size: 0.8rem;" disabled>Y +90°</button>
+            <button id="btn-rot-z" class="btn-secondary" style="padding: 8px 4px; font-size: 0.8rem;" disabled>Z +90°</button>
+          </div>
+          <button id="btn-auto-align" class="btn-secondary" style="width: 100%; font-size: 0.85rem; padding: 10px; display: inline-flex; justify-content: center; align-items: center; gap: 6px;" disabled>
+            <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24">
+              <path d="M16 13h-3V3h-2v10H8l4 4 4-4zM4 19v2h16v-2H4z"/>
+            </svg>
+            Auto-Align to Floor
+          </button>
+        </div>
+
+        <!-- 3. Tool Mode Toggle -->
+        <div class="sidebar-section">
+          <h3>Tool Mode</h3>
+          <div class="tool-modes">
+            <button id="mode-brush" class="btn-tool-mode active">Brush Paint</button>
+            <button id="mode-polygon" class="btn-tool-mode">Polygon Mask</button>
+            <button id="mode-move" class="btn-tool-mode">Move Object</button>
+          </div>
+        </div>
+
+        <!-- 3. Brush / Paint Settings (Visible for Brush Paint Mode) -->
+        <div class="sidebar-section paint-controls-group" id="brush-settings-panel">
+          <h3>Brush Settings</h3>
+          
+          <!-- Size Slider -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Brush Size</span>
+              <span id="brush-size-val">15 px</span>
+            </div>
+            <input type="range" id="brush-size" min="2" max="100" value="15">
+          </div>
+
+          <!-- Color Palette -->
+          <div class="slider-group">
+            <div class="slider-header">
+              <span>Color Presets</span>
+            </div>
+            <div class="color-palette" id="color-presets">
+              <!-- Swatches generated by JS -->
+            </div>
+            <!-- Custom Color Picker -->
+            <div class="color-swatch-custom-container">
+              <div class="color-picker-wrapper">
+                <input type="color" id="custom-color" value="#8b5cf6">
+              </div>
+              <span class="custom-color-text">Custom Paint Color</span>
+            </div>
+          </div>
+
+          <!-- Erase Toggle -->
+          <div class="toggle-row">
+            <div class="toggle-label">
+              <svg style="width:16px;height:16px;fill:currentColor;" viewBox="0 0 24 24">
+                <path d="M16.24 7.56l4.24 4.24c.78.78.78 2.05 0 2.83L14.24 21H21v-2h-3.76l3-3-4-4L16.24 7.56zM11.41 2.83L2.83 11.41c-.78.78-.78 2.05 0 2.83l6.59 6.59c.78.78 2.05.78 2.83 0l8.59-8.59c.78-.78.78-2.05 0-2.83L14.24 2.83c-.79-.79-2.05-.79-2.83 0z"/>
+              </svg>
+              <span>Erase Color</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="erase-toggle">
+              <span class="slider-switch"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. Polygon Selection Mask controls (Visible for Polygon Mask Mode) -->
+        <div class="sidebar-section paint-controls-group hidden" id="polygon-settings-panel">
+          <h3>Polygon Selection Mask</h3>
+          <p class="polygon-info-text">
+            Overlay a 2D polygon shape on screen. Adjust its joints to outline the part you want to color, then project it!
+          </p>
+          <div class="polygon-controls-group">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; background: rgba(255,255,255,0.02); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-glass);">
+              <label style="font-size: 0.85rem; color: var(--text-primary); font-weight: 500;">Mask Shape</label>
+              <select id="poly-shape-type" style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-glass); border-radius: 4px; padding: 4px 8px; color: #fff; font-family: var(--font-family); font-size: 0.85rem; outline: none; cursor: pointer;">
+                <option value="polygon">Polygon (Lasso)</option>
+                <option value="circle">Circle</option>
+              </select>
+            </div>
+            <button id="btn-poly-fill" class="btn-primary" style="width:100%;">
+              <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24">
+                <path d="M12 2c5.52 0 10 4.48 10 10s-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2zm1 10h3l-4-4-4 4h3v4h2v-4z"/>
+              </svg>
+              Fill Mask Area
+            </button>
+            <button id="btn-poly-reset" class="btn-secondary">Reset Mask Shape</button>
+            <div class="polygon-info-text" style="margin-top: 5px;">
+              💡 <b>Tips:</b><br>
+              • Drag nodes to move vertices or circle controls.<br>
+              • <b>Polygon:</b> Double-click lines to add nodes; Right-click to delete.<br>
+              • <b>Circle:</b> Center node moves; Pink node adjusts radius.<br>
+              • Rotate or zoom your 3D view to line up before drawing/filling!
+            </div>
+          </div>
+        <!-- 5. Photo Projection Painting -->
+        <div class="sidebar-section">
+          <h3>Photo Projection</h3>
+          <p class="polygon-info-text">
+            Align your 3D model with a photo of the object, then project the colors directly onto the surface.
+          </p>
+          
+          <div style="margin-bottom: 12px;">
+            <button id="btn-trigger-upload-photo" class="btn-secondary" style="width:100%; display:inline-flex; justify-content:center; align-items:center; gap:6px;">
+              <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24">
+                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+              </svg>
+              Upload Photo
+            </button>
+            <input type="file" id="photo-file-input" accept="image/*" style="display: none;">
+          </div>
+          
+          <div id="photo-control-panel" class="hidden">
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Overlay Opacity</span>
+                <span id="photo-opacity-val">40%</span>
+              </div>
+              <input type="range" id="photo-opacity-slider" min="0" max="100" value="40">
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; background: rgba(255,255,255,0.02); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-glass);">
+              <input type="checkbox" id="photo-quantize-check" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: var(--color-primary);">
+              <label for="photo-quantize-check" style="font-size: 0.8rem; color: var(--text-primary); font-weight: 500; cursor: pointer; user-select: none;">
+                Map to Palette Colors
+              </label>
+            </div>
+            
+            <button id="btn-project-photo" class="btn-primary" style="width:100%; margin-bottom:6px;">
+              Project Photo Colors
+            </button>
+            <button id="btn-clear-photo" class="btn-secondary" style="width:100%;">
+              Remove Photo Overlay
+            </button>
+          </div>
+        </div>
+
+        <!-- 6. Object Position Settings (Visible for Move Object Mode) -->
+        <div class="sidebar-section paint-controls-group hidden" id="position-settings-panel">
+          <h3>Object Position</h3>
+          
+          <!-- X Coordinate -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; color: #ef4444; font-weight: 600; width: 20px;">X:</label>
+            <input type="number" id="pos-x" step="1" value="0" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px 8px; color: #fff; width: 70px; font-family: var(--font-family); font-size: 0.85rem;">
+            <input type="range" id="slider-pos-x" min="-100" max="100" value="0" style="flex-grow: 1; height: 4px;">
+          </div>
+          
+          <!-- Y Coordinate -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
+            <label style="font-size: 0.85rem; color: #10b981; font-weight: 600; width: 20px;">Y:</label>
+            <input type="number" id="pos-y" step="1" value="0" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px 8px; color: #fff; width: 70px; font-family: var(--font-family); font-size: 0.85rem;">
+            <input type="range" id="slider-pos-y" min="-100" max="100" value="0" style="flex-grow: 1; height: 4px;">
+          </div>
+          
+          <!-- Z Coordinate -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <label style="font-size: 0.85rem; color: #3b82f6; font-weight: 600; width: 20px;">Z:</label>
+            <input type="number" id="pos-z" step="1" value="0" style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-glass); border-radius: 6px; padding: 6px 8px; color: #fff; width: 70px; font-family: var(--font-family); font-size: 0.85rem;">
+            <input type="range" id="slider-pos-z" min="-100" max="100" value="0" style="flex-grow: 1; height: 4px;">
+          </div>
+          
+          <button id="btn-reset-pos" class="btn-secondary" style="width: 100%; margin-top: 12px; font-size: 0.85rem; padding: 8px;">Reset Position</button>
+        </div>
+
+        <!-- 6. General Actions -->
+        <div class="sidebar-section action-buttons-group">
+          <h3>Actions</h3>
+          <button id="btn-save-project" class="btn-secondary" style="margin-bottom: 2px;" disabled>
+            <svg style="width:16px;height:16px;fill:currentColor;margin-right:6px;" viewBox="0 0 24 24">
+              <path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+            </svg>
+            Save Project (.json)
+          </button>
+          <button id="btn-smooth-paint" class="btn-secondary" style="margin-bottom: 2px;" disabled>
+            <svg style="width:16px;height:16px;fill:currentColor;margin-right:6px;" viewBox="0 0 24 24">
+              <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            </svg>
+            Smooth Paint Borders
+          </button>
+          <button id="btn-split-mesh" class="btn-primary" disabled>
+            <svg style="width:18px;height:18px;fill:currentColor" viewBox="0 0 24 24">
+              <path d="M3 9h18v2H3zm0 4h18v2H3zm0-8h18v2H3zm0 12h18v2H3z"/>
+            </svg>
+            Split Mesh by Colors
+          </button>
+          <button id="btn-reset-mesh" class="btn-secondary" disabled>Clear All Paint</button>
+        </div>
+      </aside>
+
+      <!-- CENTER: 3D VIEWPORT CONTAINER -->
+      <main class="viewport-container">
+        <!-- Floating Guide overlays -->
+        <div class="workbench-overlay">
+          <div class="instruction-badge">
+            <span class="indicator" id="workbench-indicator"></span>
+            <span id="workbench-status-text">Brush Paint Active</span>
+          </div>
+          <div class="instruction-badge" id="zoom-instructions-badge">
+            <span>🖱️ Drag to rotate | Scroll to zoom | Right-drag to pan</span>
+          </div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div id="canvas-container"></div>
+
+        <!-- Image Projection Overlay -->
+        <img id="image-projection-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; opacity: 0.4; display: none; z-index: 4;">
+
+        <!-- SVG Polygon Editor Overlay -->
+        <svg id="polygon-overlay">
+          <path id="polygon-path"></path>
+          <g id="polygon-handles-group"></g>
+        </svg>
+
+        <!-- Floating Viewport Navigation Control Gizmos (Zoom In / Zoom Out / Center Focus) -->
+        <div class="viewport-controls">
+          <button id="btn-zoom-in" class="viewport-btn" title="Zoom In">
+            <svg style="width:20px;height:20px;fill:currentColor" viewBox="0 0 24 24">
+              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
+          </button>
+          <button id="btn-zoom-out" class="viewport-btn" title="Zoom Out">
+            <svg style="width:20px;height:20px;fill:currentColor" viewBox="0 0 24 24">
+              <path d="M19 13H5v-2h14v2z"/>
+            </svg>
+          </button>
+          <button id="btn-zoom-fit" class="viewport-btn" title="Fit Model to View">
+            <svg style="width:20px;height:20px;fill:currentColor" viewBox="0 0 24 24">
+              <path d="M15 3h6v6h-2V5h-4V3zM9 3H3v6h2V5h4V3zm12 12h-2v4h-4v2h6v-6zm-16 4v-4H3v6h6v-2H5zM12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Loader overlay -->
+        <div class="loading-overlay" id="loading-overlay">
+          <div class="spinner"></div>
+          <div class="loading-text" id="loading-text">Loading file...</div>
+          <div class="loading-progress">
+            <div class="loading-progress-bar" id="loading-progress-bar"></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT SIDEBAR: SPLIT PARTS (Shown when mesh is split) -->
+      <aside class="sidebar right-sidebar" id="right-sidebar">
+        <div class="sidebar-section">
+          <div class="parts-header">
+            <h3>Split Objects</h3>
+            <span class="part-meta" id="split-parts-count">0 parts</span>
+          </div>
+          <div class="parts-list" id="split-parts-list">
+            <!-- Populated via Javascript -->
+          </div>
+        </div>
+
+        <div class="sidebar-section action-buttons-group">
+          <button id="btn-download-all" class="btn-primary">Download All Parts (.STL)</button>
+          <button id="btn-merge-back" class="btn-secondary">Return to Editor</button>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
